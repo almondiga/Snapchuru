@@ -1,0 +1,20 @@
+# Blueprint de despliegue en Render (plan gratuito, sin tarjeta).
+# Uso: sube el proyecto a GitHub y en Render -> "New +" -> "Blueprint".
+# Las variables con sync:false se rellenan a mano en el panel de Render
+# (así el token nunca queda en el repositorio).
+
+services:
+  - type: web
+    name: snapchuru
+    runtime: node
+    region: frankfurt
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: DISCORD_TOKEN
+        sync: false
+      - key: GUILD_ID
+        sync: false

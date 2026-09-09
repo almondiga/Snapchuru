@@ -1,0 +1,27 @@
+{
+  "name": "marvel-snap-bot",
+  "version": "1.0.0",
+  "description": "Bot de Discord para ver cartas de Marvel Snap y previsualizar mazos desde codigos",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "node test/run-tests.mjs"
+  },
+  "keywords": [
+    "discord",
+    "bot",
+    "marvel-snap",
+    "deck-codes"
+  ],
+  "author": "",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "discord.js": "^14.27.0",
+    "dotenv": "^17.4.2",
+    "sharp": "^0.35.4"
+  }
+}
