@@ -121,11 +121,8 @@ export function deckStats(cards) {
   };
 }
 
-/** Embed con las estadísticas del mazo. */
-export function deckEmbed(cards, { code, missing = [] } = {}) {
-  const stats = deckStats(cards);
-
-  // Lista agrupada por coste, en dos columnas (Coste 1 | Coste 2, Coste 3 | Coste 4...)
+/** Lista de cartas agrupada por coste, en dos columnas (Coste 1 | Coste 2, Coste 3 | Coste 4...). */
+export function deckCardGrid(cards) {
   const grouped = new Map();
   for (const c of cards) {
     const key = c.cost;
@@ -157,7 +154,13 @@ export function deckEmbed(cards, { code, missing = [] } = {}) {
     }
     if (i < pairs.length - 1) grid.push(sep);
   }
-  const description = `\`\`\`\n${grid.join('\n')}\n\`\`\``;
+  return `\`\`\`\n${grid.join('\n')}\n\`\`\``;
+}
+
+/** Embed con las estadísticas del mazo. */
+export function deckEmbed(cards, { code, missing = [] } = {}) {
+  const stats = deckStats(cards);
+  const description = deckCardGrid(cards).slice(0, 4000) || 'Sin cartas';
 
   const footerParts = [];
   if (code) footerParts.push(`Código: ${code.slice(0, 60)}`);

@@ -148,5 +148,43 @@ try {
   console.log('  FAIL imagen de preview:', err.message);
 }
 
+console.log('\n== Mazos populares (untapped.gg, fixture) ==');
+// Sembrar la caché de untapped con los fixtures para no depender de red
+const { buildPopularDecks, deckCodeFromDefIds } = await import('../src/untapped.js');
+const { popularDeckEmbed } = await import('../commands/mazos.js');
+{
+  const fixDir = path.join(__dirname, 'fixtures', 'untapped');
+  const untapDir = path.join(ROOT, 'data', 'untapped');
+  await mkdir(untapDir, { recursive: true });
+  const decksFix = JSON.parse(await readFile(path.join(fixDir, 'decks.json'), 'utf8'));
+  const cardsFix = JSON.parse(await readFile(path.join(fixDir, 'cards.json'), 'utf8'));
+  const archFix = JSON.parse(await readFile(path.join(fixDir, 'archetypes.json'), 'utf8'));
+  const stamp = () => Date.now();
+  await writeFile(path.join(untapDir, 'decks.json'), JSON.stringify({ fetchedAt: stamp(), data: decksFix }), 'utf8');
+  await writeFile(path.join(untapDir, 'cards.json'), JSON.stringify({ fetchedAt: stamp(), data: cardsFix }), 'utf8');
+  await writeFile(path.join(untapDir, 'archetypes.json'), JSON.stringify({ fetchedAt: stamp(), data: archFix.data || archFix }), 'utf8');
+
+  const popular = await buildPopularDecks({ limit: 5, minGames: 1 });
+  check('se construyen mazos populares', popular.length > 0, `(${popular.length})`);
+  const first = popular[0];
+  if (first) {
+    check('cada mazo tiene 12 cartas', first.slots.length === 12, `(${first.slots.length})`);
+    check('cada carta tiene nombre', first.slots.every((s) => s.name?.length > 0));
+    check('cada carta tiene arte', first.slots.every((s) => Boolean(s.art)), first.slots.map((s) => s.name).join(', '));
+    check('winrate entre 0 y 100', first.winrate > 0 && first.winrate <= 100, `(${first.winrate})`);
+    check('arquetipo tiene nombre', first.archName.length > 0, first.archName);
+    const code = deckCodeFromDefIds(first.slots.map((s) => s.defId));
+    check('se genera codigo importable', Boolean(code), code);
+    if (code) {
+      const dec = decodeIdentifiers(extractDeckcode(code));
+      check('el codigo generado decodifica a 12 shortnames', dec.identifiers.length === 12, `(${dec.identifiers.length})`);
+    }
+    const emb = popularDeckEmbed(first);
+    check('embed de mazo popular tiene titulo', emb.data.title === first.archName);
+    check('embed de mazo popular describe una carta', (emb.data.description ?? '').includes(first.slots[0].name));
+    check('embed tiene campo winrate', (emb.data.fields ?? []).some((f) => f.name === 'Winrate'));
+  }
+}
+
 console.log(`\n${failures === 0 ? 'TODAS LAS PRUEBAS PASARON' : `${failures} PRUEBA(S) FALLARON`}`);
 process.exit(failures === 0 ? 0 : 1);

@@ -89,6 +89,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
     await handleButton(interaction);
     return;
   }
+  if (interaction.isStringSelectMenu()) {
+    await handleSelect(interaction);
+    return;
+  }
   if (interaction.isAutocomplete()) {
     await handleAutocomplete(interaction);
     return;
@@ -109,6 +113,34 @@ client.on(Events.InteractionCreate, async (interaction) => {
     }
   }
 });
+
+/** Selector de /mazos: muestra la preview del mazo elegido. */
+async function handleSelect(interaction) {
+  if (interaction.customId !== 'mazosel') return;
+  const value = interaction.values?.[0];
+  if (!value) {
+    await interaction.update({ content: 'Selección no válida.', embeds: [], components: [] }).catch(() => {});
+    return;
+  }
+  await interaction.deferUpdate().catch(() => {});
+  try {
+    const { deckDetailForSelection } = await import('./commands/mazos.js');
+    const detail = await deckDetailForSelection(value);
+    if (!detail) {
+      await interaction
+        .editReply({ content: 'Ese mazo ya no está disponible (los datos se actualizan cada 12 h). Vuelve a ejecutar /mazos.' })
+        .catch(() => {});
+      return;
+    }
+    const reply = { embeds: [detail.embed], files: [{ attachment: detail.buffer, name: 'mazo.webp' }] };
+    await interaction.editReply(reply).catch(() => {});
+  } catch (err) {
+    console.error('Error en selector de /mazos:', err);
+    await interaction
+      .editReply({ content: 'Ocurrió un error al mostrar el mazo.', embeds: [], files: [] })
+      .catch(() => {});
+  }
+}
 
 /** Autocompletado de /carta: sugiere cartas mientras se escribe el nombre. */
 async function handleAutocomplete(interaction) {
