@@ -112,7 +112,13 @@ export function popularDeckEmbed(deck) {
 }
 
 export async function execute(interaction) {
-  await interaction.deferReply();
+  try {
+    await interaction.deferReply();
+  } catch (err) {
+    console.error('Error al diferir /mazos:', err);
+    await interaction.reply('No pude responder a tiempo; inténtalo otra vez.').catch(() => {});
+    return;
+  }
   try {
     const ranked = await getRankedList();
     if (ranked.length === 0) {
@@ -127,7 +133,7 @@ export async function execute(interaction) {
     });
   } catch (err) {
     console.error('Error en /mazos:', err);
-    return interaction.editReply(`No pude obtener los mazos populares: ${err.message}`);
+    return interaction.editReply(`No pude obtener los mazos populares: ${err.message}`).catch(() => {});
   }
 }
 

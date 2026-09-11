@@ -22,13 +22,22 @@ const UA =
 
 const normKey = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
 
-async function fetchJson(url) {
-  const res = await fetch(url, {
-    headers: { 'User-Agent': UA, Accept: 'application/json' },
-    signal: AbortSignal.timeout(45_000),
-  });
-  if (!res.ok) throw new Error(`untapped.gg HTTP ${res.status} en ${url}`);
-  return res.json();
+/** Descarga JSON con reintentos (hasta 3) y timeout amplio para redes lentas. */
+async function fetchJson(url, attempt = 1) {
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': UA, Accept: 'application/json' },
+      signal: AbortSignal.timeout(60_000),
+    });
+    if (!res.ok) throw new Error(`untapped.gg HTTP ${res.status} en ${url}`);
+    return await res.json();
+  } catch (err) {
+    if (attempt < 3) {
+      await new Promise((r) => setTimeout(r, 800 * attempt));
+      return fetchJson(url, attempt + 1);
+    }
+    throw err;
+  }
 }
 
 /** Carga (o descarga si la caché está caducada) un JSON de untapped.gg. */
@@ -92,15 +101,16 @@ export function aggregateDeck(deck) {
 
 /**
  * Resuelve una carta de untapped (por defId) contra la base local de marvelsnapzone.
- * Si no existe allí (cartas nuevas), usa los datos de untapped y su arte como respaldo.
+ * Si msz no está disponible o la carta no existe allí (cartas nuevas),
+ * usa los datos de untapped y su arte como respaldo.
  */
 function resolveSlot(defId, byDefId, msz) {
   const uc = byDefId.get(defId) ?? null;
-  let card = msz.byId.get(defId) ?? null;
-  if (!card) card = msz.byNorm.get(normKey(defId))?.[0] ?? null;
+  let card = msz?.byId.get(defId) ?? null;
+  if (!card) card = msz?.byNorm.get(normKey(defId))?.[0] ?? null;
   if (!card && uc) {
-    card = msz.byNorm.get(normKey(uc.name))?.[0] ?? null;
-    if (!card) card = msz.byName.get(String(uc.name).toLowerCase())?.[0] ?? null;
+    card = msz?.byNorm.get(normKey(uc.name))?.[0] ?? null;
+    if (!card) card = msz?.byName.get(String(uc.name).toLowerCase())?.[0] ?? null;
   }
 
   if (card) {
@@ -134,7 +144,14 @@ function resolveSlot(defId, byDefId, msz) {
  */
 export async function buildPopularDecks({ limit = 10, minGames = 200 } = {}) {
   const { decks, cards, archetypes } = await getUntappedData();
-  const msz = await loadCards();
+  // marvelsnapzone es solo un extra de resolución (arte/estilo): si no responde
+  // (p. ej. Cloudflare en datacenters), /mazos sigue funcionando con datos de untapped.
+  let msz = null;
+  try {
+    msz = await loadCards();
+  } catch (err) {
+    console.warn('loadCards no disponible para /mazos; usando solo untapped.gg:', err.message);
+  }
   const byDefId = new Map(cards.map((c) => [c.defId, c]));
 
   const byArch = new Map();

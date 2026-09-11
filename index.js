@@ -13,6 +13,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadCards, getCardByCardDefId, searchCards } from './src/cardData.js';
 import { cardEmbedAt } from './src/embeds.js';
+import { getUntappedData } from './src/untapped.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -76,6 +77,10 @@ client.once(Events.ClientReady, async (c) => {
   loadCards()
     .then((s) => console.log(`Base de cartas lista: ${s.list.length} cartas`))
     .catch((e) => console.error('No se pudo precargar la base de cartas:', e.message));
+  // Precargar untapped.gg: el primer /mazos será instantáneo y los fallos de red salen aquí
+  getUntappedData()
+    .then((u) => console.log(`Datos de untapped.gg listos: ${u.decks.length} mazos, ${u.cards.length} cartas, ${Object.keys(u.archetypes).length} arquetipos`))
+    .catch((e) => console.error('No se pudo precargar untapped.gg:', e.message));
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {
@@ -105,7 +110,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     await command.execute(interaction);
   } catch (err) {
     console.error(`Error ejecutando /${interaction.commandName}:`, err);
-    const msg = 'Ocurrió un error inesperado al ejecutar el comando.';
+    const msg = `Ocurrió un error al ejecutar el comando: ${String(err?.message || err).slice(0, 1500)}`;
     if (interaction.deferred || interaction.replied) {
       await interaction.editReply(msg).catch(() => {});
     } else {
