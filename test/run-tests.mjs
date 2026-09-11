@@ -151,7 +151,7 @@ try {
 console.log('\n== Mazos populares (untapped.gg, fixture) ==');
 // Sembrar la caché de untapped con los fixtures para no depender de red
 const { buildPopularDecks, deckCodeFromDefIds } = await import('../src/untapped.js');
-const { popularDeckEmbed } = await import('../commands/mazos.js');
+const { popularDeckEmbed, pageForNav } = await import('../commands/mazos.js');
 {
   const fixDir = path.join(__dirname, 'fixtures', 'untapped');
   const untapDir = path.join(ROOT, 'data', 'untapped');
@@ -184,6 +184,29 @@ const { popularDeckEmbed } = await import('../commands/mazos.js');
     check('embed de mazo popular describe una carta', (emb.data.description ?? '').includes(first.slots[0].name));
     check('embed tiene campo winrate', (emb.data.fields ?? []).some((f) => f.name === 'Winrate'));
   }
+}
+
+console.log('\n== Paginador de mazos populares ==');
+{
+  const page1 = await pageForNav('mazosnav:prev:1');
+  check('pagina 1 tiene embed', Boolean(page1.embeds?.[0]?.data?.title), page1.embeds?.[0]?.data?.title);
+  check('pagina 1 indica la pagina', (page1.embeds[0].data.title ?? '').includes('página 1/'), page1.embeds[0].data.title);
+  const sel1 = page1.components[0].toJSON();
+  const row1 = page1.components[1].toJSON();
+  check('pagina 1 tiene selector con 5 opciones', sel1.options.length === 5, `(${sel1.options.length})`);
+  check('las opciones del selector traen archId|games', sel1.options.every((o) => /^\d+\|\d+$/.test(o.value)), JSON.stringify(sel1.options.map((o) => o.value)));
+  check('pagina 1 tiene fila de flechas', row1.components.length === 2, `(${row1.components.length})`);
+  check('prev deshabilitado en pagina 1', row1.components[0].disabled === true);
+  check('next habilitado en pagina 1', row1.components[1].disabled === false);
+  const page2 = await pageForNav('mazosnav:next:1');
+  check('next desde 1 llega a pagina 2', (page2.embeds[0].data.title ?? '').includes('página 2/'), page2.embeds[0].data.title);
+  const row2 = page2.components[1].toJSON();
+  check('prev habilitado en pagina 2', row2.components[0].disabled === false);
+  check('pagina 2 lista mazos distintos', page2.embeds[0].data.description !== page1.embeds[0].data.description);
+  const last = await pageForNav(`mazosnav:next:99`);
+  const lastBtns = last.components[1].toJSON().components;
+  check('next deshabilitado en la ultima pagina', lastBtns[1].disabled === true, JSON.stringify(lastBtns.map((b) => b.disabled)));
+  check('embed del listado no muestra cubos', !(page1.embeds[0].data.description ?? '').includes('cubos'));
 }
 
 console.log(`\n${failures === 0 ? 'TODAS LAS PRUEBAS PASARON' : `${failures} PRUEBA(S) FALLARON`}`);

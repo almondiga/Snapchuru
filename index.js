@@ -169,9 +169,23 @@ async function handleAutocomplete(interaction) {
   }
 }
 
-/** Botones: navegación de variantes (variantes:...) y selección de carta (selcarta|...). */
+/** Botones: navegación de variantes (variantes:...), selección de carta (selcarta|...) y paginación de /mazos (mazosnav:...). */
 async function handleButton(interaction) {
   const customId = interaction.customId;
+
+  if (customId.startsWith('mazosnav:')) {
+    try {
+      const { pageForNav } = await import('./commands/mazos.js');
+      const reply = await pageForNav(customId);
+      await interaction.update(reply).catch(() => {});
+    } catch (err) {
+      console.error('Error en paginación de /mazos:', err);
+      await interaction
+        .update({ content: 'Ocurrió un error al cambiar de página.', embeds: [], components: [] })
+        .catch(() => {});
+    }
+    return;
+  }
 
   if (customId.startsWith('selcarta|')) {
     const carddefid = customId.split('|')[1];
