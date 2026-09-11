@@ -82,6 +82,17 @@ function navButtons(page, ranked) {
 }
 
 /**
+ * Filas de componentes del listado: fila 1 = selector de mazos (siempre envuelto
+ * en ActionRow, Discord lo exige), fila 2 = flechas de paginación.
+ */
+function listComponents(ranked, page) {
+  return [
+    new ActionRowBuilder().addComponents(pageSelectMenu(ranked, page)),
+    navButtons(page, ranked),
+  ];
+}
+
+/**
  * Embed con el detalle de un mazo popular (stats + lista de cartas + código).
  */
 export function popularDeckEmbed(deck) {
@@ -129,7 +140,7 @@ export async function execute(interaction) {
     const embed = listPageEmbed(ranked, 1);
     return interaction.editReply({
       embeds: [embed],
-      components: [pageSelectMenu(ranked, 1), navButtons(1, ranked)],
+      components: listComponents(ranked, 1),
     });
   } catch (err) {
     console.error('Error en /mazos:', err);
@@ -168,6 +179,6 @@ export async function pageForNav(customId) {
   page = Math.min(Math.max(page, 1), pageCount);
   return {
     embeds: [listPageEmbed(ranked, page)],
-    components: [pageSelectMenu(ranked, page), navButtons(page, ranked)],
+    components: listComponents(ranked, page),
   };
 }
