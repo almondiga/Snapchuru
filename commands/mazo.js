@@ -26,8 +26,11 @@ export async function execute(interaction) {
     await loadCards();
     const { cards, missing } = resolveDeckIdentifiers(identifiers);
     if (cards.length === 0) {
+      const preview = identifiers.identifiers.slice(0, 6).join(', ');
+      const plural = identifiers.identifiers.length === 1 ? 'identificador' : 'identificadores';
       return interaction.editReply(
-        'No pude resolver ninguna carta del código. ¿Es un código válido de Marvel Snap?',
+        `No pude resolver ninguna carta del código. Decodifiqué ${identifiers.identifiers.length} ${plural} (${preview}...) que no coinciden con mi base de cartas. ` +
+          'Si el código lo exporta el juego, pásamelo tal cual (formato base64). Si lo copiaste de una web, dime de cuál para adaptar el formato.',
       );
     }
 

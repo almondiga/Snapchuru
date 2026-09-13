@@ -15,6 +15,10 @@ export function toShortName(cardDefId) {
  * El usuario puede pegar el código rodeado de líneas de comentario (#)
  * o con espacios; se filtran las líneas no válidas.
  *
+ * Si la decodificación directa no produce texto válido, se reintenta
+ * descartando 1-2 caracteres iniciales: algunos exports del juego
+ * (o un copiado con artefactos) añaden un carácter extra al principio.
+ *
  * @param {string} input
  * @returns {{type: 'long'|'short', deckcode: string} | null}
  */
@@ -30,15 +34,20 @@ export function extractDeckcode(input) {
 
   if (!rawcode64) return null;
 
-  let rawcode;
-  try {
-    rawcode = Buffer.from(rawcode64, 'base64').toString('utf-8');
-  } catch {
-    return null;
-  }
+  // Formato corto válido: shortnames separados por comas (p. ej. "SpdrHm9,Srg5,...")
+  const isShortText = (t) => /^[A-Za-z0-9]+(,[A-Za-z0-9]+)+$/.test(t.trim());
 
-  if (rawcode.includes('{')) return { type: 'long', deckcode: rawcode };
-  if (rawcode.length > 0) return { type: 'short', deckcode: rawcode };
+  for (const candidate of [rawcode64, rawcode64.slice(1), rawcode64.slice(2)]) {
+    if (candidate.length < 4) continue;
+    let rawcode;
+    try {
+      rawcode = Buffer.from(candidate, 'base64').toString('utf-8');
+    } catch {
+      continue;
+    }
+    if (rawcode.includes('{')) return { type: 'long', deckcode: rawcode };
+    if (isShortText(rawcode)) return { type: 'short', deckcode: rawcode };
+  }
   return null;
 }
 

@@ -70,6 +70,26 @@ const shortIds = decodeIdentifiers(extractedShort);
 check('decodeIdentifiers corto extrae 12 shortnames', shortIds.identifiers.length === 12);
 check('toShortName(SpiderMan) == SpdrMn9', toShortName('SpiderMan') === 'SpdrMn9');
 
+console.log('\n== Codigos con caracter extra al inicio ==');
+// Algunos exports del juego (o copiados) añaden un carácter antes del código real
+const prefixedShort = 'n' + shortCode;
+const decPrefixed = extractDeckcode(prefixedShort);
+check('extractDeckcode tolera prefijo extra (corto)', decPrefixed?.type === 'short');
+check('el prefijo extra no rompe los ids', decPrefixed && decodeIdentifiers(decPrefixed).identifiers.length === 12);
+const prefixedLong = 'X' + longCode;
+const decPrefixedLong = extractDeckcode(prefixedLong);
+check('extractDeckcode tolera prefijo extra (largo)', decPrefixedLong?.type === 'long');
+check('el prefijo extra no rompe los ids largos', decPrefixedLong && decodeIdentifiers(decPrefixedLong).identifiers.length === 12);
+const garbage = extractDeckcode('https://marvelsnapzone.com/decks/foo-bar');
+check('una URL no se interpreta como codigo', garbage === null);
+const binaryBase64 = Buffer.from([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]).toString('base64');
+check('base64 binario sin estructura no se acepta', extractDeckcode(binaryBase64) === null);
+// El código real del usuario (con la 'n' extra al inicio) debe decodificar tras quitarla
+const userCode = 'nSWtyNSxKYmw3LElybkNkNyxLaGhyNyxFblNiaE5yQSxDcHRuTXJ2bEQsQ2xsT2JzZG5DLFpiNCxBbnRQbHJNZ250MTAsUHNsY2s4LEJsbms1LENyc3NibnNB';
+const decUser = extractDeckcode(userCode);
+check('codigo del usuario (con prefijo extra) se decodifica', decUser?.type === 'short');
+check('codigo del usuario da 12 ids', decUser && decodeIdentifiers(decUser).identifiers.length === 12, decUser && String(decodeIdentifiers(decUser).identifiers.length));
+
 console.log('\n== Resolucion de cartas ==');
 const resolved = resolveDeckIdentifiers(ids);
 check('resuelve las 12 cartas', resolved.cards.length === 12, `(resolvio ${resolved.cards.length}, missing=${resolved.missing.length})`);

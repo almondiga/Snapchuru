@@ -87,11 +87,13 @@ async function fetchFromApi() {
 export async function loadCards({ force = false, ttlMs = DEFAULT_TTL_MS } = {}) {
   if (state && !force && Date.now() - state.loadedAt < ttlMs) return state;
 
+  let cachedCards = null;
   if (!force) {
     try {
       const cached = JSON.parse(await readFile(CACHE_FILE, 'utf8'));
-      if (cached?.fetchedAt && Date.now() - cached.fetchedAt < ttlMs && Array.isArray(cached.cards)) {
-        state = buildState(cached.cards);
+      if (Array.isArray(cached.cards)) cachedCards = cached.cards;
+      if (cached?.fetchedAt && Date.now() - cached.fetchedAt < ttlMs && cachedCards) {
+        state = buildState(cachedCards);
         return state;
       }
     } catch {
@@ -99,11 +101,24 @@ export async function loadCards({ force = false, ttlMs = DEFAULT_TTL_MS } = {}) 
     }
   }
 
-  const list = await fetchFromApi();
-  state = buildState(list);
-  await mkdir(DATA_DIR, { recursive: true });
-  await writeFile(CACHE_FILE, JSON.stringify({ fetchedAt: Date.now(), cards: state.list }), 'utf8');
-  return state;
+  try {
+    const list = await fetchFromApi();
+    state = buildState(list);
+    await mkdir(DATA_DIR, { recursive: true });
+    await writeFile(CACHE_FILE, JSON.stringify({ fetchedAt: Date.now(), cards: state.list }), 'utf8');
+    return state;
+  } catch (err) {
+    // Si no se puede actualizar (p. ej. Cloudflare bloquea el datacenter de Render),
+    // seguir funcionando con la caché local aunque esté caducada.
+    if (cachedCards) {
+      console.warn(
+        `No se pudo actualizar la base de cartas (${err.message}); usando la caché local (${cachedCards.length} cartas).`,
+      );
+      state = buildState(cachedCards);
+      return state;
+    }
+    throw err;
+  }
 }
 
 export function getCardByCardDefId(cardDefId) {
