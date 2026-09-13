@@ -89,6 +89,11 @@ const userCode = 'nSWtyNSxKYmw3LElybkNkNyxLaGhyNyxFblNiaE5yQSxDcHRuTXJ2bEQsQ2xsT
 const decUser = extractDeckcode(userCode);
 check('codigo del usuario (con prefijo extra) se decodifica', decUser?.type === 'short');
 check('codigo del usuario da 12 ids', decUser && decodeIdentifiers(decUser).identifiers.length === 12, decUser && String(decodeIdentifiers(decUser).identifiers.length));
+// Reconstrucción del código limpio: re-codificar el texto decodificado debe dar el código original sin el prefijo
+if (decPrefixed) {
+  const rebuilt = Buffer.from(decPrefixed.deckcode, 'utf8').toString('base64');
+  check('el codigo limpio reconstruido coincide con el original', rebuilt === shortCode, `(${rebuilt.slice(0, 20)}... vs ${shortCode.slice(0, 20)}...)`);
+}
 
 console.log('\n== Resolucion de cartas ==');
 const resolved = resolveDeckIdentifiers(ids);
@@ -121,6 +126,10 @@ console.log('\n== Embed (sin Discord, solo datos) ==');
 const embed = deckEmbed(resolved.cards, { code: longCode, missing: [] });
 check('embed tiene titulo', embed.data.title === 'Preview del mazo');
 check('embed describe las 12 cartas', (embed.data.description ?? '').includes('Deadpool'));
+const codeField = (embed.data.fields ?? []).find((f) => f.name === 'Código para importar');
+check('embed muestra el codigo en campo seleccionable', Boolean(codeField), JSON.stringify(embed.data.fields?.map((f) => f.name)));
+check('embed muestra el codigo COMPLETO (sin recortar)', Boolean(codeField?.value.includes(longCode)), `(${codeField?.value?.length} chars vs ${longCode.length})`);
+check('el pie del embed no lleva el codigo recortado', !((embed.data.footer?.text ?? '').includes('Código:')), embed.data.footer?.text);
 
 console.log('\n== Embed de carta ==');
 const sampleCard = searchCards('deadpool')[0];

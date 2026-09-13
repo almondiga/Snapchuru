@@ -157,14 +157,12 @@ export function deckCardGrid(cards) {
   return `\`\`\`\n${grid.join('\n')}\n\`\`\``;
 }
 
-/** Embed con las estadísticas del mazo. */
+/** Embed con las estadísticas del mazo. El código va completo y en un campo
+ *  seleccionable (los pies de embed no se pueden copiar en Discord y causaban
+ *  que la gente compartiese códigos recortados). */
 export function deckEmbed(cards, { code, missing = [] } = {}) {
   const stats = deckStats(cards);
   const description = deckCardGrid(cards).slice(0, 4000) || 'Sin cartas';
-
-  const footerParts = [];
-  if (code) footerParts.push(`Código: ${code.slice(0, 60)}`);
-  if (missing.length > 0) footerParts.push(`${missing.length} carta(s) no encontradas`);
 
   const embed = new EmbedBuilder()
     .setTitle('Preview del mazo')
@@ -176,6 +174,11 @@ export function deckEmbed(cards, { code, missing = [] } = {}) {
       { name: 'Poder total', value: String(stats.totalPower), inline: true },
       { name: 'Curva de costes', value: stats.curve.slice(0, 1024), inline: false },
     );
+  if (code) {
+    embed.addFields({ name: 'Código para importar', value: `\`${code}\`` });
+  }
+  const footerParts = [];
+  if (missing.length > 0) footerParts.push(`${missing.length} carta(s) no encontradas`);
   if (footerParts.length > 0) embed.setFooter({ text: footerParts.join(' · ') });
   return embed;
 }

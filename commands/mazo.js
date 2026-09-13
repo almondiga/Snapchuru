@@ -34,8 +34,16 @@ export async function execute(interaction) {
       );
     }
 
+    // Código limpio y completo para mostrar: en formato corto se reconstruye
+    // desde el texto decodificado (sin el carácter extra que a veces arrastra
+    // el copiado), para que al compartirlo importe las 12 cartas.
+    let cleanCode = input.replace(/\s+/g, ' ').trim();
+    if (deckcode.type === 'short') {
+      cleanCode = Buffer.from(deckcode.deckcode, 'utf8').toString('base64');
+    }
+
     const embed = deckEmbed(cards, {
-      code: input.replace(/\s+/g, ' ').trim().slice(0, 100),
+      code: cleanCode,
       missing,
     });
 
